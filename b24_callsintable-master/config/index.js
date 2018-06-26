@@ -50,7 +50,7 @@ module.exports = {
     // Paths
     assetsRoot: path.resolve(__dirname, '../dist'),
     assetsSubDirectory: 'calls_in_table/release',
-    assetsPublicPath: '/',
+    assetsPublicPath: '',
 
     /**
      * Source Maps

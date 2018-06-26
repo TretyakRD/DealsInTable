@@ -26,15 +26,15 @@
         />
       </div>
       <div class="m-phone">
-        <div class="m-phone__ttl">Ответственный</div>
+        <div class="m-phone__ttl">Постановщик</div>
         <input
           type="text"
           class="m-phone__input"
-          placeholder="Имя ответственного"
-          v-model="subscribersPhone"
+          placeholder="Имя постановщика"
+          v-model="creator"
         />
       </div>
-      <button type="button" class="m-row__submit" @click="loadCalls">
+      <button type="button" class="m-row__submit" @click="loadTasks">
         <div class="m-row__submit-inner">Загрузить задачи</div>
       </button>
       <div class="m-controls">
@@ -49,17 +49,17 @@
     <ag-grid-vue
       style="width: 100%; height: calc(100vh - 145px);"
       class="ag-theme-balham"
-      :gridOptions="callsTable.gridOptions"
-      :columnDefs="callsTable.columnDefs"
-      :rowData="callsTable.rowData"
-      :autoGroupColumnDef="callsTable.autoGroupColumnDef"
-      :rowGroupPanelShow="callsTable.rowGroupPanelShow"
-      :overlayLoadingTemplate="callsTable.overlayLoadingTemplate"
-      :overlayNoRowsTemplate="callsTable.overlayNoRowsTemplate"
+      :gridOptions="tasksTable.gridOptions"
+      :columnDefs="tasksTable.columnDefs"
+      :rowData="tasksTable.rowData"
+      :autoGroupColumnDef="tasksTable.autoGroupColumnDef"
+      :rowGroupPanelShow="tasksTable.rowGroupPanelShow"
+      :overlayLoadingTemplate="tasksTable.overlayLoadingTemplate"
+      :overlayNoRowsTemplate="tasksTable.overlayNoRowsTemplate"
       :columnResized="columnChange"
       :displayedColumnsChanged="columnChange"
       :toolPanelSuppressPivotMode="true"
-      :localeText="callsTable.localeText"
+      :localeText="tasksTable.localeText"
     />
 
     <!-- popup -->
@@ -89,7 +89,7 @@ import VueTimepicker from 'vue2-timepicker'
 /* eslint-disable */
 import {
   getInitialData, getDateValues, getFormattedDate, getTableData,
-  getDomainWithTimer, extractContent, getFormattedTimeFromSeconds, getRawPhone,
+  getDomainWithTimer, extractContent, getFormattedTimeFromSeconds, 
   getDateDiffInDays
 } from '../helpers'
 /* eslint-enable */
@@ -110,43 +110,9 @@ export default {
       // в дальнейшем управление идет через методы gridApi
       fetching: true,
       date: getDateValues(),
-      subscribersPhone: '',
-      operatorPhone: '',
+      creator: '',
       domain: '',
-      durationFilter: {
-        type: 'any',
-        values: {
-          first: {
-            HH: '00',
-            mm: '00',
-            ss: '00'
-          },
-          second: {
-            HH: '00',
-            mm: '00',
-            ss: '00'
-          }
-        },
-        options: [
-          {
-            id: 'any',
-            label: 'Любая'
-          },
-          {
-            id: 'less',
-            label: 'Менее чем'
-          },
-          {
-            id: 'more',
-            label: 'Более чем'
-          },
-          {
-            id: 'range',
-            label: 'Задать диапазон'
-          }
-        ]
-      },
-      callsTable: {
+      tasksTable: {
         gridOptions: {
           animateRows: true,
           enableColResize: true,
@@ -168,22 +134,17 @@ export default {
             cellRenderer: params => params.value,
           },
           {
-            headerName: 'Описание',
-            field: 'type',
-            enableRowGroup: true
-          },
-          {
             headerName: 'Статус',
             field: 'status',
             enableRowGroup: true
           },
           {
             headerName: 'Дедлайн',
-            field: 'CALL_START_DATE',
+            field: 'deadline',
             enableRowGroup: true,
             sort: 'asc',
             valueGetter (params) {
-              return params.data && params.data.CALL_START_DATE && getFormattedDate(new Date(params.data.CALL_START_DATE))
+              return params.data && params.data.deadline && getFormattedDate(new Date(params.data.deadline))
             }
           },
           {
@@ -311,30 +272,13 @@ export default {
     }
   },
   computed: {
-    durationFilterFirst () {
-      const h = +this.durationFilter.values.first.HH
-      const m = +this.durationFilter.values.first.mm
-      const s = +this.durationFilter.values.first.ss
-      return s + (60 * (m + (60 * h))) - 1
-    },
-    durationFilterSecond () {
-      const h = +this.durationFilter.values.second.HH
-      const m = +this.durationFilter.values.second.mm
-      const s = +this.durationFilter.values.second.ss
-      return s + (60 * (m + (60 * h))) + 1
-    },
+
     'noPayPopupConfirmLink' () {
       const domain = window.BX24.getDomain()
       return `//${domain}/marketplace/detail/itsolution.callsintable/`
     }
   },
   methods: {
-    nameComparator (name1, name2) {
-      if (!name1 && !name2) return 0
-      name1 = extractContent(name1).toLowerCase()
-      name2 = extractContent(name2).toLowerCase()
-      return name1 > name2 ? 1 : -1
-    },
     columnChange () {
       if (this.gridColumnApi) {
         columnState = this.gridColumnApi.getColumnState()
@@ -358,52 +302,41 @@ export default {
     checkVersionOfApp () {
       return !!window._itSol && window.callsInTable._itSol === 'itsolutionru.callsintable'
     },
-    async loadCalls () {
+    async loadTasks () {
+
       this.gridApi.showLoadingOverlay()
       const isPaidVersion = this.checkVersionOfApp()
       const periodInDays = getDateDiffInDays(new Date(this.date.min), new Date(this.date.max))
-      let getCallOptions = {}
-      // фильтр по телефону
-      if (this.subscribersPhone.length) {
-        let subscribersRawPhone = getRawPhone(this.subscribersPhone)
-        Object.assign(getCallOptions, {'PHONE_NUMBER': subscribersRawPhone})
+
+      let getTaskOptions = [{CREATED_BY:'desc'},{},{}]
+      // фильтр по постановщику
+      if (this.creator.length) {
+        let creator_name = this.creator
+        Object.assign(getTaskOptions[1], {CREATED_BY:creator_name})
       }
-      // фильтр по длительности звонка
-      if (this.durationFilter.type === 'more' || this.durationFilter.type === 'less') {
-        if (this.durationFilterFirst > 0) {
-          Object.assign(getCallOptions, {
-            [`${this.durationFilter.type === 'more' ? '>' : '<'}CALL_DURATION`]: this.durationFilterFirst
-          })
-        }
-      } else if (this.durationFilter.type === 'range') {
-        let min = this.durationFilterFirst
-        let max = this.durationFilterSecond
-        if (this.durationFilterFirst > this.durationFilterSecond) {
-          Object.assign(getCallOptions, {
-            '>CALL_DURATION': min
-          })
-        } else {
-          Object.assign(getCallOptions, {
-            '>CALL_DURATION': min,
-            '<CALL_DURATION': max
-          })
-        }
+      if (periodInDays!=0){
+        let start_day = this.date.min.toISOString().replace(/\.\d{3}Z/i, "+03:00");
+        let stop_day = this.date.max.toISOString().replace(/\.\d{3}Z/i, "+03:00");
+        Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '>CREATED_DATE':start_day})
       }
-      initialData = await getInitialData(this.date, getCallOptions)
+      
+      initialData = await getInitialData(this.date, getTaskOptions)
       // действуем по-разному в зависимости от того, платная ли у нас версия
       // сколько компаний в выборке и каков выбранный период
-      if (isPaidVersion || (periodInDays < 7 || (initialData.calls && initialData.calls.length <= 100))) {
-        this.callsTable.rowData = getTableData(initialData, {domain: this.domain})
+      if (isPaidVersion || (periodInDays < 7 || (initialData.tasks && initialData.tasks.length <= 100))) {
+        this.tasksTable.rowData = getTableData(initialData, {domain: this.domain})
       } else {
         // если период более месяца и звонков за этот период более 100
         // то открываем попап с сообщением
         this.$modal.show('warning-no-paid-version')
         // и выводим пустую выборку
-        this.callsTable.rowData = getTableData(Object.assign(initialData, {calls: []}), {domain: this.domain})
+        this.tasksTable.rowData = getTableData(Object.assign(initialData, {tasks: []}), {domain: this.domain})
       }
       this.gridApi.hideOverlay()
-      if (this.callsTable.rowData.length === 0) this.gridApi.showNoRowsOverlay()
+      if (this.tasksTable.rowData.length === 0) this.gridApi.showNoRowsOverlay()
+
     }
+
   },
   async created () {
     const isPaidVersion = this.checkVersionOfApp()
@@ -418,21 +351,21 @@ export default {
     initialData = await getInitialData(this.date)
     // действуем по-разному в зависимости от того, платная ли у нас версия
     // сколько компаний в выборке и каков выбранный период
-    if (isPaidVersion || (periodInDays < 7 || (initialData.calls && initialData.calls.length <= 100))) {
-      this.callsTable.rowData = getTableData(initialData, {domain: this.domain})
+    if (isPaidVersion || (periodInDays < 7 || (initialData.tasks && initialData.tasks.length <= 100))) {
+      this.tasksTable.rowData = getTableData(initialData, {domain: this.domain})
     } else {
       // если период более месяца и звонков за этот период более 100
       // то открываем попап с сообщением
       this.$modal.show('warning-no-paid-version')
       // и выводим пустую выборку
-      this.callsTable.rowData = getTableData(Object.assign(initialData, {calls: []}), {domain: this.domain})
+      this.tasksTable.rowData = getTableData(Object.assign(initialData, {tasks: []}), {domain: this.domain})
     }
     this.fetching = false
     if (this.gridApi && this.gridApi.hideOverlay) this.gridApi.hideOverlay()
   },
   mounted () {
     // делаем так, чтобы строка таблицы была на всю длину
-    this.callsTable.gridOptions.onGridReady = params => {
+    this.tasksTable.gridOptions.onGridReady = params => {
       this.gridApi = params.api
       this.gridColumnApi = params.columnApi
       if (columnState) {
@@ -440,12 +373,12 @@ export default {
       } else {
         const columns = this.gridColumnApi.getAllColumns()
         this.gridColumnApi.autoSizeColumns(columns)
-        this.callsTable.gridOptions.api.sizeColumnsToFit()
+        this.tasksTable.gridOptions.api.sizeColumnsToFit()
       }
       // initial data инициализируется перед export default в этом компоненте
       if (this.fetching) this.gridApi.showLoadingOverlay()
-      if (!this.fetching && this.callsTable.rowData.length === 0) this.gridApi.showNoRowsOverlay()
-      if (!this.fetching && this.callsTable.rowData.length > 0) this.gridApi.hideOverlay()
+      if (!this.fetching && this.tasksTable.rowData.length === 0) this.gridApi.showNoRowsOverlay()
+      if (!this.fetching && this.tasksTable.rowData.length > 0) this.gridApi.hideOverlay()
     }
   }
 }
