@@ -177,6 +177,22 @@ export default {
             field: 'project',
             enableRowGroup: true
           },
+          {
+            headerName: 'Сотрудник',
+            field: 'worker',
+            enableRowGroup: true
+          },
+          {
+            headerName: 'Дата работы',
+            field: 'date_of_work',
+            enableRowGroup: true,
+            valueFormatter: params => params.value && getFormattedTimeFromSeconds(params.value)
+          },
+          {
+            headerName: 'Время работы',
+            field: 'time_of_work',
+            enableRowGroup: true
+          },
         ],
         rowData: [],
         overlayLoadingTemplate: '<span class="ag-overlay-loading-center"><span class="ag-loaging">Загрузка задач</span></span>',
@@ -362,6 +378,7 @@ export default {
       .then(domain => { this.domain = domain })
       .catch(error => console.error(error))
     initialData = await getInitialData(this.date)
+    console.log(initialData)
     // действуем по-разному в зависимости от того, платная ли у нас версия
     // сколько компаний в выборке и каков выбранный период
     if (isPaidVersion || (periodInDays < 7 || (initialData.tasks && initialData.tasks.length <= 100))) {

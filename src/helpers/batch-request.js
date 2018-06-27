@@ -7,7 +7,8 @@ export const sendSpecialBatch = async function (method, requestOptions = {}) {
   const {FILTER, SELECT, FIELDS} = requestOptions
   const res = await BX.callMethod(method, requestOptions)
   const total = res.answer.total
-  if (total <= 50) return res.answer.result
+  if (res.answer.result.length <= 50 || total <= 50) return res.answer.result
+
   let items = []
   let lastId = '0'
   let itemsInBatch = 50 * apiQueriesInBatchCount
@@ -54,12 +55,12 @@ export const sendSpecialBatch = async function (method, requestOptions = {}) {
       return j
     }).catch(console.error)
   }
+
   return items
 }
 
 export const getTasks = async function (filter = []) {
   const res = await BX.callMethod('task.item.list', filter)
-  console.log(res)
   const total = res.answer.total
   if (total <= 50) return res.answer.result
   let tasks = []

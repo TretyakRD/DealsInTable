@@ -6,7 +6,7 @@ export async function getInitialData (dateValues, getTaskOptions = []) {
   const tasks = await getTasks(getTaskOptions)
   let groups = []
   let users = []
-  
+  let times = []
   groups = sendSpecialBatch('sonet_group.get', {
     ORDER: {
     NAME: 'ASC'
@@ -14,21 +14,24 @@ export async function getInitialData (dateValues, getTaskOptions = []) {
     
     })
   users = sendSpecialBatch('user.get')
-
+  times = await sendSpecialBatch('task.elapseditem.getlist')
   return {
     tasks: await tasks,
     groups: await groups,
     users: await users,
+    times: times
   }
 }
 
 //
 export function getTableData (initialData, data = {}) {
-  const {tasks, groups, users} = initialData;
-  console.log(users)
+  const {tasks, groups, users, times} = initialData;
+
   const {domain} = data;
-  const parsedTasks = tasks.map(task => {
-    let tmp = Object.assign(task, {
+  let ManagedTasks = {}
+  let parsedTasks=[];
+  tasks.forEach(function(task){
+    let tmp = {
       timeStart: getSecondsFromStartOfDay(Date.parse(task.START_DATE_PLAN)),
       timeEnd: getSecondsFromStartOfDay(Date.parse(task.END_DATE_PLAN)),
       status: getStatusName(task.REAL_STATUS),
@@ -36,11 +39,55 @@ export function getTableData (initialData, data = {}) {
       creator: task.CREATED_BY_LAST_NAME+" "+task.CREATED_BY_NAME,
       project: getProjectName(groups, task.GROUP_ID),
       responded: task.RESPONSIBLE_LAST_NAME+" "+task.RESPONSIBLE_NAME,
-      deadline: getSecondsFromStartOfDay(Date.parse(task.DEADLINE))
-    })
-    return tmp
-  })
+      deadline: getSecondsFromStartOfDay(Date.parse(task.DEADLINE)),
+    };
+    ManagedTasks[task.ID] = tmp;
+
+    if(task.TIME_ESTIMATE=="0"){
+      parsedTasks.push(Object.assign(
+        tmp, {
+          worker: "",
+          date_of_work: "",
+          time_of_work: ""
+      }
+      ));
+    }
+  });
+
+  times.forEach(function(time){
+    console.log(time);
+      let tmp = Object.assign(
+        ManagedTasks[time.TASK_ID], {
+          worker: getUserName(users, time.USER_ID),
+          date_of_work: getSecondsFromStartOfDay(Date.parse(time.DATE_START)),
+          time_of_work: getTimeFromSeconds(time.SECONDS)
+            }
+      );
+      
+      parsedTasks.push(tmp);
+  });
+  console.log(parsedTasks);
   return parsedTasks;
+}
+
+
+//
+export function getTimeFromSeconds (seconds) {
+  return (seconds/3600) + ':' + (seconds/60)%60 + ':' + seconds%60;
+}
+
+//
+export function getUserName (arr, id) {
+  let ctch = false;
+  arr.forEach(function(el){
+    if(Number(el.ID) == Number(id)){
+      ctch = el.NAME +' '+el.LAST_NAME;
+    }
+  });
+  if(ctch)
+    return ctch
+  return "Неизвестный"
+  
 }
 
 //
