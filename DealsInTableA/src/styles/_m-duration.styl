@@ -1,0 +1,35 @@
+$root = '.m-duration'
+
+{$root}
+  display flex
+  align-items center
+  margin 2px 0
+
+  &__select
+    width 175px
+    margin 0 10px
+    color $baseText
+    z-index 10
+
+    .vue-treeselect__single-value
+      color $baseText
+
+  &__options
+    display flex
+    align-items center
+
+  &__dash
+    width 15px
+    height 1px
+    background-color black
+    margin 0 10px
+
+  &__timepicker
+    &.time-picker
+      width 100px
+
+      .display-time
+        color $baseText
+        width 100px
+        border-radius 4px
+        font-family Helvetica, Arial, sans-serif
