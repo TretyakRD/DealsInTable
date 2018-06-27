@@ -6,33 +6,19 @@ export async function getInitialData (dateValues, getTaskOptions = []) {
   const tasks = await getTasks(getTaskOptions)
   let groups = []
   let users = []
-  let company = []
-  let contact = []
-  // собираем все айдишники и делаем их уникальными с помощью сет
-  let ids = {
-    group: [],
-    user: [],
-    company: [],
-    contact: []
-  }
-
-  ids.group = [...new Set(ids.group)]
-  ids.user = [...new Set(ids.user)]
-  ids.company = [...new Set(ids.company)]
-  ids.contact = [...new Set(ids.contact)]
+  
   groups = sendSpecialBatch('sonet_group.get', {
     ORDER: {
     NAME: 'ASC'
     },
     
     })
-  if (ids.users.length) users = sendSpecialBatch('user.get')
+  users = sendSpecialBatch('user.get')
+
   return {
     tasks: await tasks,
     groups: await groups,
     users: await users,
-    company: await company,
-    contact: await contact
   }
 }
 
@@ -45,8 +31,8 @@ export function getTableData (initialData, data = {}) {
     let tmp = Object.assign(task, {
       timeStart: getSecondsFromStartOfDay(Date.parse(task.START_DATE_PLAN)),
       timeEnd: getSecondsFromStartOfDay(Date.parse(task.END_DATE_PLAN)),
-      status: task.REAL_STATUS,
-      title: task.TITLE,
+      status: getStatusName(task.REAL_STATUS),
+      title: `<a target="_blank" class="c-link" href="//${domain}/company/personal/user/0/tasks/task/view/${task.ID}/">${task.TITLE}</a>`,
       creator: task.CREATED_BY_LAST_NAME+" "+task.CREATED_BY_NAME,
       project: getProjectName(groups, task.GROUP_ID),
       responded: task.RESPONSIBLE_LAST_NAME+" "+task.RESPONSIBLE_NAME,
@@ -68,6 +54,43 @@ export function getProjectName (arr, id) {
   if(ctch)
     return ctch
   return "Без проекта"
+  
+}
+
+//
+export function getStatusName (code) {
+switch(code){
+  case '1':
+  return "Новая";
+  break;
+
+  case '2':
+  return "Ожидает (Принята)";
+  break;
+
+  case '3':
+  return "Выполняется";
+  break;
+
+  case '4':
+  return "Почти завершена";
+  break;
+
+  case '5':
+  return "Завершена";
+  break;
+
+  case '6':
+  return "Отложена";
+  break;
+
+  case '7':
+  return "Отклонена";
+  break;
+
+  default:
+  return "Без статуса";
+}
   
 }
 

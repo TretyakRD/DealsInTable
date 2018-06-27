@@ -101,6 +101,3 @@ export const getTasks = async function (filter = []) {
   }
   return tasks
 }
-
-
-

@@ -32,6 +32,7 @@
           class="m-phone__input"
           placeholder="Имя постановщика"
           v-model="creator"
+          @keyup.enter="loadTasks"
         />
       </div>
       <button type="button" class="m-row__submit" @click="loadTasks">
@@ -309,15 +310,27 @@ export default {
       const periodInDays = getDateDiffInDays(new Date(this.date.min), new Date(this.date.max))
 
       let getTaskOptions = [{CREATED_BY:'desc'},{},{}]
+
       // фильтр по постановщику
       if (this.creator.length) {
-        let creator_name = this.creator
-        Object.assign(getTaskOptions[1], {CREATED_BY:creator_name})
+        let creator_name = this.creator.toLowerCase()
+        let creator_ids = [-1]
+        initialData.users.forEach(function(user){
+          let issub=true;
+          let user_full_name = (user.NAME+' '+user.LAST_NAME).toLowerCase();
+          creator_name.split(' ').forEach(sub=>issub&=user_full_name.includes(sub));
+          if(issub)
+            {creator_ids.push(user.ID)}
+        });
+        Object.assign(getTaskOptions[1], {CREATED_BY:creator_ids})
       }
+
+
+      //фильтр по дате
       if (periodInDays!=0){
         let start_day = this.date.min.toISOString().replace(/\.\d{3}Z/i, "+03:00");
         let stop_day = this.date.max.toISOString().replace(/\.\d{3}Z/i, "+03:00");
-        Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '>CREATED_DATE':start_day})
+        Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '>CREATED_DATE':start_day});
       }
       
       initialData = await getInitialData(this.date, getTaskOptions)
