@@ -91,7 +91,7 @@ import VueTimepicker from 'vue2-timepicker'
 import {
   getInitialData, getDateValues, getFormattedDate, getTableData,
   getDomainWithTimer, extractContent, getFormattedTimeFromSeconds, 
-  getDateDiffInDays
+  getDateDiffInDays, get_YMD_Date, getTimeFromSeconds
 } from '../helpers'
 /* eslint-enable */
 
@@ -124,7 +124,7 @@ export default {
           rowHeight: 36,
           sortingOrder: ['asc', 'desc'],
           pagination: true,
-          paginationAutoPageSize: true
+          paginationAutoPageSize: true,
         },
         rowGroupPanelShow: 'always',
         columnDefs: [
@@ -186,12 +186,14 @@ export default {
             headerName: 'Дата работы',
             field: 'date_of_work',
             enableRowGroup: true,
-            valueFormatter: params => params.value && getFormattedTimeFromSeconds(params.value)
+            valueFormatter: params => params.value && get_YMD_Date(params.value)
           },
           {
             headerName: 'Время работы',
             field: 'time_of_work',
-            enableRowGroup: true
+            aggFunc: 'sum', 
+            enableValue: true,
+            valueFormatter: params => params.value && getTimeFromSeconds(params.value)
           },
         ],
         rowData: [],
@@ -324,7 +326,7 @@ export default {
       this.gridApi.showLoadingOverlay()
       const isPaidVersion = this.checkVersionOfApp()
       const periodInDays = getDateDiffInDays(new Date(this.date.min), new Date(this.date.max))
-
+      console.log(periodInDays)
       let getTaskOptions = [{CREATED_BY:'desc'},{},{}]
 
       // фильтр по постановщику
@@ -343,13 +345,11 @@ export default {
 
 
       //фильтр по дате
-      if (periodInDays!=0){
         let start_day = this.date.min.toISOString().replace(/\.\d{3}Z/i, "+03:00");
         let stop_day = this.date.max.toISOString().replace(/\.\d{3}Z/i, "+03:00");
         Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '>CREATED_DATE':start_day});
-      }
       
-      initialData = await getInitialData(this.date, getTaskOptions)
+      initialData = await getInitialData(getTaskOptions)
       // действуем по-разному в зависимости от того, платная ли у нас версия
       // сколько компаний в выборке и каков выбранный период
       if (isPaidVersion || (periodInDays < 7 || (initialData.tasks && initialData.tasks.length <= 100))) {
@@ -373,12 +373,18 @@ export default {
     // увеличиваем окно до 10к пикселей по высоте
     const BX = window.BX24
     const width = document.documentElement.offsetWidth
-    BX && BX.resizeWindow(width, 10000)
+    BX && BX.resizeWindow(width, 800)
+    let getTaskOptions = [{CREATED_BY:'desc'},{},{}]
     await getDomainWithTimer()
       .then(domain => { this.domain = domain })
       .catch(error => console.error(error))
-    initialData = await getInitialData(this.date)
-    console.log(initialData)
+
+    //фильтр по дате
+        let start_day = this.date.min.toISOString().replace(/\.\d{3}Z/i, "+03:00");
+        let stop_day = this.date.max.toISOString().replace(/\.\d{3}Z/i, "+03:00");
+        Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '=>CREATED_DATE':start_day});
+    console.log(getTaskOptions)
+    initialData = await getInitialData(getTaskOptions)
     // действуем по-разному в зависимости от того, платная ли у нас версия
     // сколько компаний в выборке и каков выбранный период
     if (isPaidVersion || (periodInDays < 7 || (initialData.tasks && initialData.tasks.length <= 100))) {

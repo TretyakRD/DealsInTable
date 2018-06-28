@@ -61,6 +61,7 @@ export const sendSpecialBatch = async function (method, requestOptions = {}) {
 
 export const getTasks = async function (filter = []) {
   const res = await BX.callMethod('task.item.list', filter)
+  console.log(res)
   const total = res.answer.total
   if (total <= 50) return res.answer.result
   let tasks = []

@@ -2,7 +2,7 @@
 import {sendSpecialBatch, getTasks} from './batch-request'
 
 //
-export async function getInitialData (dateValues, getTaskOptions = []) {
+export async function getInitialData (getTaskOptions = []) {
   const tasks = await getTasks(getTaskOptions)
   let groups = []
   let users = []
@@ -32,38 +32,35 @@ export function getTableData (initialData, data = {}) {
   let parsedTasks=[];
   tasks.forEach(function(task){
     let tmp = {
-      timeStart: getSecondsFromStartOfDay(Date.parse(task.START_DATE_PLAN)),
-      timeEnd: getSecondsFromStartOfDay(Date.parse(task.END_DATE_PLAN)),
+      timeStart: Number(getSecondsFromStartOfDay(Date.parse(task.START_DATE_PLAN))),
+      timeEnd: Number(getSecondsFromStartOfDay(Date.parse(task.END_DATE_PLAN))),
       status: getStatusName(task.REAL_STATUS),
       title: `<a target="_blank" class="c-link" href="//${domain}/company/personal/user/0/tasks/task/view/${task.ID}/">${task.TITLE}</a>`,
       creator: task.CREATED_BY_LAST_NAME+" "+task.CREATED_BY_NAME,
       project: getProjectName(groups, task.GROUP_ID),
       responded: task.RESPONSIBLE_LAST_NAME+" "+task.RESPONSIBLE_NAME,
-      deadline: getSecondsFromStartOfDay(Date.parse(task.DEADLINE)),
+      deadline: Number(getSecondsFromStartOfDay(Date.parse(task.DEADLINE))),
     };
     ManagedTasks[task.ID] = tmp;
 
     if(task.TIME_ESTIMATE=="0"){
       parsedTasks.push(Object.assign(
         tmp, {
-          worker: "",
+          worker: "Задача",
           date_of_work: "",
-          time_of_work: ""
+          time_of_work: 0
       }
       ));
     }
   });
-
   times.forEach(function(time){
-    console.log(time);
-      let tmp = Object.assign(
+       let tmp = Object.assign({},
         ManagedTasks[time.TASK_ID], {
           worker: getUserName(users, time.USER_ID),
-          date_of_work: getSecondsFromStartOfDay(Date.parse(time.DATE_START)),
-          time_of_work: getTimeFromSeconds(time.SECONDS)
+          date_of_work: Number(getSecondsFromStartOfDay(Date.parse(time.DATE_START))),
+          time_of_work: Number(time.SECONDS)
             }
       );
-      
       parsedTasks.push(tmp);
   });
   console.log(parsedTasks);
@@ -73,7 +70,17 @@ export function getTableData (initialData, data = {}) {
 
 //
 export function getTimeFromSeconds (seconds) {
-  return (seconds/3600) + ':' + (seconds/60)%60 + ':' + seconds%60;
+seconds = Number(seconds)
+var date = new Date(null);
+date.setSeconds(seconds);
+return date.toISOString().substr(11, 8);
+}
+
+//
+export function get_YMD_Date (seconds) {
+seconds = Number(seconds)
+var date = new Date(seconds);
+return date.toISOString().substr(0, 4)+'.'+date.toISOString().substr(5, 2)+'.'+date.toISOString().substr(8, 2);
 }
 
 //
@@ -149,7 +156,7 @@ export function getDateValues () {
   const nextMonth = month < 11 ? month + 1 : 0
   return {
     min: new Date(year, month),
-    max: new Date(new Date(year, nextMonth) - 1)
+    max: new Date(year, month)
   }
 }
 
@@ -259,6 +266,7 @@ export function extractContent (html) {
 
 // a and b are js date objects
 const _msPerDay = 1000 * 60 * 60 * 24
+
 export function getDateDiffInDays (a, b) {
   const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
   const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())
