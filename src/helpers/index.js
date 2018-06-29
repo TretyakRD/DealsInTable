@@ -2,8 +2,8 @@
 import {sendSpecialBatch, getTasks} from './batch-request'
 
 //
-export async function getInitialData (getTaskOptions = []) {
-  const tasks = await getTasks(getTaskOptions)
+/*export async function getInitialData (getTaskOptions = []) {
+  const tasks = await sendSpecialBatch('task.item.list', getTaskOptions)
   let groups = []
   let users = []
   let times = []
@@ -21,7 +21,42 @@ export async function getInitialData (getTaskOptions = []) {
     users: await users,
     times: times
   }
+}*/
+
+//
+export async function getInitialData (getTaskOptions = []) {
+  const times = await sendSpecialBatch('task.elapseditem.getlist', getTaskOptions)
+
+  let GroupsOptions = [{ID : 'desc'},{ID:[-1,]}]
+  let UsersOptions = [{ID:[]}]
+  let TasksOptions = [{ID : 'desc'},{ID:[-1,]}]
+
+  let groups = []
+  let users = []
+  let tasks = []
+
+times.forEach(time=>{
+  TasksOptions[1].ID.push(time.TASK_ID);
+  UsersOptions[0].ID.push(time.USER_ID);
+});
+
+  users = await sendSpecialBatch('user.get', UsersOptions)
+  tasks = await sendSpecialBatch('task.item.list', TasksOptions)
+
+  tasks.forEach(task=>{
+    GroupsOptions[1].ID.push(task.GROUP_ID);
+  });
+
+  groups = await sendSpecialBatch('sonet_group.get', GroupsOptions)
+  
+  return {
+    tasks: await tasks,
+    groups: await groups,
+    users: await users,
+    times: await times
+  }
 }
+
 
 //
 export function getTableData (initialData, data = {}) {
@@ -43,24 +78,17 @@ export function getTableData (initialData, data = {}) {
     };
     ManagedTasks[task.ID] = tmp;
 
-    if(task.TIME_ESTIMATE=="0"){
-      parsedTasks.push(Object.assign(
-        tmp, {
-          worker: "Задача",
-          date_of_work: "",
-          time_of_work: 0
-      }
-      ));
-    }
   });
   times.forEach(function(time){
        let tmp = Object.assign({},
         ManagedTasks[time.TASK_ID], {
           worker: getUserName(users, time.USER_ID),
           date_of_work: Number(getSecondsFromStartOfDay(Date.parse(time.DATE_START))),
-          time_of_work: Number(time.SECONDS)
+          time_of_work: Number(time.SECONDS),
+          month: Number(get_month(Number(getSecondsFromStartOfDay(Date.parse(time.DATE_START)))))
             }
       );
+      
       parsedTasks.push(tmp);
   });
   console.log(parsedTasks);
@@ -271,4 +299,12 @@ export function getDateDiffInDays (a, b) {
   const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
   const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())
   return Math.floor((utcB - utcA) / _msPerDay)
+}
+
+export var  months_names = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+
+// добавление месяца как поля
+export function get_month (seconds) {
+  return (new Date(seconds)).getMonth();
 }

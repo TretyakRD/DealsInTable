@@ -26,12 +26,12 @@
         />
       </div>
       <div class="m-phone">
-        <div class="m-phone__ttl">Постановщик</div>
+        <div class="m-phone__ttl">Сотрудник</div>
         <input
           type="text"
           class="m-phone__input"
           placeholder="Имя постановщика"
-          v-model="creator"
+          v-model="worker"
           @keyup.enter="loadTasks"
         />
       </div>
@@ -91,7 +91,7 @@ import VueTimepicker from 'vue2-timepicker'
 import {
   getInitialData, getDateValues, getFormattedDate, getTableData,
   getDomainWithTimer, extractContent, getFormattedTimeFromSeconds, 
-  getDateDiffInDays, get_YMD_Date, getTimeFromSeconds
+  getDateDiffInDays, get_YMD_Date, getTimeFromSeconds, months_names
 } from '../helpers'
 /* eslint-enable */
 
@@ -111,7 +111,7 @@ export default {
       // в дальнейшем управление идет через методы gridApi
       fetching: true,
       date: getDateValues(),
-      creator: '',
+      worker: '',
       domain: '',
       tasksTable: {
         gridOptions: {
@@ -133,6 +133,11 @@ export default {
             field: 'title',
             enableRowGroup: true,
             cellRenderer: params => params.value,
+          },
+          {
+            headerName: 'Проект',
+            field: 'project',
+            enableRowGroup: true
           },
           {
             headerName: 'Статус',
@@ -173,19 +178,14 @@ export default {
             enableRowGroup: true
           },
           {
-            headerName: 'Проект',
-            field: 'project',
-            enableRowGroup: true
-          },
-          {
             headerName: 'Сотрудник',
             field: 'worker',
             enableRowGroup: true
           },
           {
             headerName: 'Дата работы',
-            field: 'date_of_work',
             enableRowGroup: true,
+            field: 'date_of_work',
             valueFormatter: params => params.value && get_YMD_Date(params.value)
           },
           {
@@ -195,6 +195,12 @@ export default {
             enableValue: true,
             valueFormatter: params => params.value && getTimeFromSeconds(params.value)
           },
+          {
+            headerName: 'Месяц',
+            enableRowGroup: true,
+            field: 'month',
+            valueFormatter: params => params.value && months_names[params.value]
+          }
         ],
         rowData: [],
         overlayLoadingTemplate: '<span class="ag-overlay-loading-center"><span class="ag-loaging">Загрузка задач</span></span>',
@@ -326,28 +332,27 @@ export default {
       this.gridApi.showLoadingOverlay()
       const isPaidVersion = this.checkVersionOfApp()
       const periodInDays = getDateDiffInDays(new Date(this.date.min), new Date(this.date.max))
-      console.log(periodInDays)
-      let getTaskOptions = [{CREATED_BY:'desc'},{},{}]
+      let getTaskOptions = [{'CREATED_DATE': 'asc'},{},{}]
 
-      // фильтр по постановщику
-      if (this.creator.length) {
-        let creator_name = this.creator.toLowerCase()
-        let creator_ids = [-1]
+      // фильтр по сотруднику
+      if (this.worker.length) {
+        let worker_name = this.worker.toLowerCase()
+        let worker_ids = [-1]
         initialData.users.forEach(function(user){
           let issub=true;
           let user_full_name = (user.NAME+' '+user.LAST_NAME).toLowerCase();
-          creator_name.split(' ').forEach(sub=>issub&=user_full_name.includes(sub));
+          worker_name.split(' ').forEach(sub=>issub&=user_full_name.includes(sub));
           if(issub)
-            {creator_ids.push(user.ID)}
+            {worker_ids.push(user.ID)}
         });
-        Object.assign(getTaskOptions[1], {CREATED_BY:creator_ids})
+        Object.assign(getTaskOptions[1], {USER_ID:worker_ids})
       }
 
 
       //фильтр по дате
         let start_day = this.date.min.toISOString().replace(/\.\d{3}Z/i, "+03:00");
         let stop_day = this.date.max.toISOString().replace(/\.\d{3}Z/i, "+03:00");
-        Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '>CREATED_DATE':start_day});
+        Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '>=CREATED_DATE':start_day});
       
       initialData = await getInitialData(getTaskOptions)
       // действуем по-разному в зависимости от того, платная ли у нас версия
@@ -374,7 +379,7 @@ export default {
     const BX = window.BX24
     const width = document.documentElement.offsetWidth
     BX && BX.resizeWindow(width, 800)
-    let getTaskOptions = [{CREATED_BY:'desc'},{},{}]
+    let getTaskOptions = [{'CREATED_DATE': 'asc'},{},{}]
     await getDomainWithTimer()
       .then(domain => { this.domain = domain })
       .catch(error => console.error(error))
@@ -382,8 +387,7 @@ export default {
     //фильтр по дате
         let start_day = this.date.min.toISOString().replace(/\.\d{3}Z/i, "+03:00");
         let stop_day = this.date.max.toISOString().replace(/\.\d{3}Z/i, "+03:00");
-        Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '=>CREATED_DATE':start_day});
-    console.log(getTaskOptions)
+        Object.assign(getTaskOptions[1], {'<CREATED_DATE':stop_day, '>=CREATED_DATE':start_day});
     initialData = await getInitialData(getTaskOptions)
     // действуем по-разному в зависимости от того, платная ли у нас версия
     // сколько компаний в выборке и каков выбранный период

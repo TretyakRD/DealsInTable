@@ -3,7 +3,7 @@ import * as BX from './bx-api'
 
 const apiQueriesInBatchCount = 50
 
-export const sendSpecialBatch = async function (method, requestOptions = {}) {
+export const sendSpecialBatch = async function (method, requestOptions) {
   const {FILTER, SELECT, FIELDS} = requestOptions
   const res = await BX.callMethod(method, requestOptions)
   const total = res.answer.total
@@ -59,7 +59,7 @@ export const sendSpecialBatch = async function (method, requestOptions = {}) {
   return items
 }
 
-export const getTasks = async function (filter = []) {
+/*export const getTasks = async function (filter = []) {
   const res = await BX.callMethod('task.item.list', filter)
   console.log(res)
   const total = res.answer.total
@@ -103,3 +103,4 @@ export const getTasks = async function (filter = []) {
   }
   return tasks
 }
+*/
